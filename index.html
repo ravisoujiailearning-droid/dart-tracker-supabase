@@ -17,9 +17,10 @@ html,body{height:100%}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text)}
 .screen{display:none;min-height:100vh}
 .screen.active{display:block}
+#welcome.active{display:flex}
 
 /* ── WELCOME ── */
-#welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 1.5rem;min-height:100vh;text-align:center}
+#welcome{flex-direction:column;align-items:center;justify-content:center;padding:2rem 1.5rem;min-height:100vh;text-align:center}
 .logo-mark{width:68px;height:68px;background:var(--text);border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem}
 .logo-mark span{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;color:#fff;letter-spacing:1px}
 .welcome-title{font-size:32px;font-weight:700;letter-spacing:-0.5px;margin-bottom:0.4rem}
@@ -281,10 +282,17 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text)}
 <div class="toast" id="toast"></div>
 
 <script>
+// ── SCREEN NAV — defined first so onclick buttons always work ─────────────────
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='setup') renderSetup();
+}
+
 // ── CONFIG — put your Supabase details here ───────────────────────────────────
 // After creating your Supabase project, replace these two lines:
-const SUPA_URL = 'https://tabehpkqensjlpelwsot.supabase.co';      // e.g. https://abcxyz.supabase.co
-const SUPA_KEY = 'sb_publishable_z8pWbyVP86YWjeXxE9tojA_9dHuHBZz'; // your anon/public key
+const SUPA_URL = 'YOUR_SUPABASE_URL';      // e.g. https://abcxyz.supabase.co
+const SUPA_KEY = 'YOUR_SUPABASE_ANON_KEY'; // your anon/public key
 
 // ── CONSTANTS ────────────────────────────────────────────────────────────────
 const MONTHS=['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -810,13 +818,6 @@ function leaveGroup(){
     localStorage.removeItem('dart_me');
     location.reload();
   }
-}
-
-// ── SCREEN NAV ────────────────────────────────────────────────────────────────
-function showScreen(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  if(id==='setup') renderSetup();
 }
 
 // ── LOADER ────────────────────────────────────────────────────────────────────
