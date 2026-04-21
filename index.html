@@ -552,7 +552,7 @@ async function saveDay(){
     showToast('Saved ✓');
     setSyncStatus('ok','Saved just now');
   } catch(e){
-    showToast('Saved on phone. Will sync when online.');
+    showToast(e+'Saved on phone. Will sync when online.');
   }
   isSyncing=false;
   btn.classList.remove('saving');
