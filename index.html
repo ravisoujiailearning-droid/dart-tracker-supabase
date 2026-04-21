@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>DART · Daily Activity & Routine Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#F4F2EE; --card:#FFFFFF; --text:#1C1B18; --muted:#8C8A84;
+  --border:rgba(0,0,0,0.08); --light:#ECEAE5; --radius:14px;
+  --green:#1A9E72; --red:#E04F4F; --amber:#E8960A; --blue:#2B7FD4;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text)}
+.screen{display:none;min-height:100vh}
+.screen.active{display:block}
+
+/* ── WELCOME ── */
+#welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem 1.5rem;min-height:100vh;text-align:center}
+.logo-mark{width:68px;height:68px;background:var(--text);border-radius:20px;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem}
+.logo-mark span{font-family:'DM Mono',monospace;font-size:13px;font-weight:500;color:#fff;letter-spacing:1px}
+.welcome-title{font-size:32px;font-weight:700;letter-spacing:-0.5px;margin-bottom:0.4rem}
+.welcome-sub{font-size:15px;color:var(--muted);margin-bottom:2.5rem;line-height:1.6;max-width:280px}
+.welcome-btns{display:flex;flex-direction:column;gap:10px;width:100%;max-width:320px}
+
+/* ── BUTTONS ── */
+.btn{width:100%;padding:15px;border-radius:var(--radius);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600;cursor:pointer;transition:opacity 0.15s;border:none}
+.btn:active{opacity:0.8}
+.btn-primary{background:var(--text);color:#fff}
+.btn-outline{background:transparent;color:var(--text);border:1.5px solid var(--text)}
+.btn-outline:active{background:var(--light)}
+.btn-danger{background:#fff0f0;color:var(--red);border:none}
+.btn-sm{width:auto;padding:10px 18px;font-size:14px}
+
+/* ── FORMS ── */
+.page{max-width:440px;margin:0 auto;padding:1.5rem 1.25rem 5rem}
+.back-btn{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted);background:none;border:none;cursor:pointer;padding:0;margin-bottom:1.5rem;font-family:'DM Sans',sans-serif}
+.page-title{font-size:24px;font-weight:700;letter-spacing:-0.3px;margin-bottom:0.25rem}
+.page-sub{font-size:14px;color:var(--muted);margin-bottom:1.75rem}
+.field{margin-bottom:1rem}
+.field label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px}
+.field input{width:100%;padding:12px 14px;border-radius:var(--radius);border:1.5px solid var(--border);background:var(--card);color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;outline:none;transition:border-color 0.15s}
+.field input:focus{border-color:var(--text)}
+.section-label{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin:1.5rem 0 0.75rem}
+.add-btn{display:flex;align-items:center;gap:6px;padding:10px 14px;border-radius:var(--radius);border:1.5px dashed var(--border);background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:14px;cursor:pointer;width:100%;justify-content:center;margin-bottom:1rem}
+.remove-btn{width:34px;height:34px;border-radius:50%;border:none;background:#fff0f0;color:var(--red);font-size:16px;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.emoji-btn{width:44px;height:44px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.act-row-setup{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.act-row-setup input{flex:1;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;background:var(--card);color:var(--text)}
+.member-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.member-row input{flex:1;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;background:var(--card);color:var(--text)}
+.color-dot{width:36px;height:36px;border-radius:50%;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;border:3px solid transparent;transition:transform 0.1s}
+.color-dot:active{transform:scale(0.9)}
+
+/* ── JOIN ── */
+.code-input{width:100%;text-align:center;font-family:'DM Mono',monospace;font-size:30px;font-weight:500;letter-spacing:6px;padding:18px;border-radius:var(--radius);border:1.5px solid var(--border);background:var(--card);color:var(--text);text-transform:uppercase;outline:none}
+.code-input:focus{border-color:var(--text)}
+.member-option{padding:14px 16px;border-radius:var(--radius);border:1.5px solid var(--border);background:var(--card);cursor:pointer;display:flex;align-items:center;gap:12px;transition:all 0.15s;margin-bottom:8px}
+.member-option.selected{border-color:var(--text);background:var(--light)}
+.member-avatar{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;flex-shrink:0}
+
+/* ── CODE DISPLAY ── */
+.code-display{background:var(--text);color:#fff;border-radius:18px;padding:1.75rem;text-align:center;margin:1rem 0}
+.code-display .code{font-family:'DM Mono',monospace;font-size:40px;font-weight:500;letter-spacing:10px;margin:0.5rem 0}
+.code-display .sub{font-size:13px;opacity:0.55}
+
+/* ── APP HEADER ── */
+#app{max-width:440px;margin:0 auto;padding-bottom:2rem}
+.app-header{padding:1rem 1rem 0.4rem;display:flex;align-items:flex-start;justify-content:space-between}
+.group-name{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--muted)}
+.month-title{font-size:22px;font-weight:700;letter-spacing:-0.3px}
+.header-btns{display:flex;gap:8px;padding-top:2px}
+.icon-btn{width:36px;height:36px;border-radius:10px;background:var(--light);border:none;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.sync-bar{display:flex;align-items:center;gap:6px;padding:2px 1rem 0}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:var(--green);transition:background 0.3s}
+.sync-dot.syncing{background:var(--amber);animation:pulse 1s infinite}
+.sync-dot.offline{background:var(--red)}
+.sync-text{font-size:11px;color:var(--muted)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+
+/* ── MONTH TABS ── */
+.month-tabs{display:flex;gap:5px;padding:0.6rem 1rem;overflow-x:auto;scrollbar-width:none}
+.month-tabs::-webkit-scrollbar{display:none}
+.mtab{flex:0 0 auto;padding:5px 13px;border-radius:20px;border:1px solid var(--border);font-size:13px;font-weight:500;cursor:pointer;background:var(--card);color:var(--muted);font-family:'DM Sans',sans-serif}
+.mtab.active{background:var(--text);color:#fff;border-color:var(--text)}
+
+/* ── SCORE STRIP ── */
+.score-strip{display:flex;gap:8px;padding:0 1rem 0.5rem;overflow-x:auto;scrollbar-width:none}
+.score-strip::-webkit-scrollbar{display:none}
+.score-card{flex:0 0 auto;background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:10px 12px;display:flex;align-items:center;gap:8px;min-width:115px}
+.score-avatar{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
+.score-name{font-size:11px;color:var(--muted);font-weight:500;white-space:nowrap;max-width:70px;overflow:hidden;text-overflow:ellipsis}
+.score-pct{font-size:17px;font-weight:700}
+
+/* ── CALENDAR ── */
+.cal-wrap{padding:0 1rem 0.5rem}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;margin-bottom:3px}
+.cal-dow span{text-align:center;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal-cell{aspect-ratio:1;border-radius:9px;border:1px solid var(--border);background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;overflow:hidden}
+.cal-cell.empty{background:transparent;border-color:transparent;cursor:default}
+.cal-cell.today{border:2px solid var(--text)}
+.cal-cell.selected{background:var(--light)}
+.cal-cell .cn{font-size:12px;font-weight:600}
+.cal-cell .cd{font-size:8px;color:var(--muted);text-transform:uppercase}
+.cal-cell .cpips{display:flex;gap:2px;flex-wrap:wrap;justify-content:center;margin-top:2px;max-width:28px}
+.pip{width:4px;height:4px;border-radius:50%}
+
+/* ── ACTIVITY LIST ── */
+.day-panel{padding:0.75rem 1rem 0}
+.day-heading{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px}
+.col-heads{display:flex;align-items:center;padding:0 0 6px;overflow-x:auto;scrollbar-width:none}
+.col-heads::-webkit-scrollbar{display:none}
+.ch-name{flex:1;font-size:11px;color:var(--muted);padding-left:34px;min-width:0}
+.ch-user{width:36px;text-align:center;font-size:9px;font-weight:700;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.act-row{display:flex;align-items:center;background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:10px 10px;margin-bottom:6px;gap:6px}
+.act-emoji{font-size:17px;width:24px;text-align:center;flex-shrink:0}
+.act-name{flex:1;font-size:14px;font-weight:500;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.act-toggle{width:34px;height:34px;border-radius:50%;border:1.5px solid var(--border);background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:14px;transition:all 0.12s;flex-shrink:0}
+.act-toggle.mine{cursor:pointer}
+.act-toggle.mine:active{transform:scale(0.9)}
+.act-toggle.done{border:none;color:#fff}
+.act-toggle.skip{background:#fff0f0;border-color:var(--red);color:var(--red)}
+
+/* ── SAVE ── */
+.save-wrap{padding:0.75rem 1rem 0}
+.save-btn{width:100%;padding:15px;border-radius:var(--radius);border:none;background:var(--text);color:#fff;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity 0.15s}
+.save-btn.saving{opacity:0.5;pointer-events:none}
+.spinner{width:16px;height:16px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin 0.6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── MODAL ── */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100;align-items:flex-end;justify-content:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--card);border-radius:22px 22px 0 0;width:100%;max-width:440px;max-height:92vh;overflow-y:auto}
+.modal-hd{padding:1.25rem 1.5rem;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:var(--card);z-index:1;border-bottom:0.5px solid var(--border)}
+.modal-hd h3{font-size:17px;font-weight:700}
+.close-btn{background:none;border:none;font-size:22px;cursor:pointer;color:var(--muted);line-height:1}
+.modal-bd{padding:1.25rem 1.5rem 2.5rem}
+
+/* ── REPORT ── */
+.month-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:10px;overflow:hidden}
+.month-card.open{border-color:rgba(0,0,0,0.2)}
+.month-card-hd{padding:14px 16px;cursor:pointer;display:flex;align-items:center;gap:10px;-webkit-tap-highlight-color:transparent}
+.month-arrow{font-size:18px;color:var(--muted);transition:transform 0.2s;margin-left:auto;flex-shrink:0}
+.month-card.open .month-arrow{transform:rotate(90deg)}
+.month-bd{border-top:0.5px solid var(--border);padding:12px 14px}
+
+/* ── EMOJI PICKER ── */
+.emoji-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;padding:1rem}
+.epick{font-size:22px;padding:5px;border-radius:8px;cursor:pointer;text-align:center}
+.epick:active{background:var(--light)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(20px);background:var(--text);color:#fff;padding:10px 20px;border-radius:24px;font-size:13px;font-weight:500;opacity:0;transition:all 0.25s;pointer-events:none;z-index:999;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.err{background:var(--red)}
+
+/* ── SPINNER OVERLAY ── */
+.loader{display:none;position:fixed;inset:0;background:rgba(244,242,238,0.8);z-index:200;align-items:center;justify-content:center;flex-direction:column;gap:12px;font-size:14px;color:var(--muted)}
+.loader.show{display:flex}
+.loader .big-spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--text);border-radius:50%;animation:spin 0.8s linear infinite}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div class="loader" id="loader"><div class="big-spinner"></div><span id="loader-text">Loading…</span></div>
+
+<!-- WELCOME -->
+<div id="welcome" class="screen active">
+  <div class="logo-mark"><span>DART</span></div>
+  <h1 class="welcome-title">Build better<br>habits together.</h1>
+  <p class="welcome-sub">Track daily activities as a group. See everyone's progress in one place.</p>
+  <div class="welcome-btns">
+    <button class="btn btn-primary" onclick="showScreen('setup')">Create a group</button>
+    <button class="btn btn-outline" onclick="showScreen('join')">Join with a code</button>
+  </div>
+</div>
+
+<!-- SETUP -->
+<div id="setup" class="screen">
+  <div class="page">
+    <button class="back-btn" onclick="showScreen('welcome')">← Back</button>
+    <div class="page-title">Create a group</div>
+    <p class="page-sub">Set up activities and members. You'll get a join code to share.</p>
+    <div class="field"><label>Group name</label>
+      <input type="text" id="grp-name" placeholder="e.g. Family Wellness, Team Fitness…" maxlength="40">
+    </div>
+    <div class="section-label">Activities to track</div>
+    <div id="activities-list"></div>
+    <button class="add-btn" onclick="addActivity()">＋ Add activity</button>
+    <div class="section-label">Members</div>
+    <div id="members-list"></div>
+    <button class="add-btn" onclick="addMember()">＋ Add member</button>
+    <button class="btn btn-primary" style="margin-top:1.5rem" onclick="createGroup()">Create group →</button>
+  </div>
+</div>
+
+<!-- JOIN -->
+<div id="join" class="screen">
+  <div class="page">
+    <button class="back-btn" onclick="showScreen('welcome')">← Back</button>
+    <div class="page-title">Join a group</div>
+    <p class="page-sub">Enter the 6-character code your admin shared with you.</p>
+    <input class="code-input" id="join-code" maxlength="6" placeholder="ABC123" oninput="onCodeInput(this)">
+    <div id="join-error" style="color:var(--red);font-size:13px;margin-top:0.75rem;display:none"></div>
+    <div id="join-members" style="display:none">
+      <p class="section-label" style="margin-top:1.25rem">Who are you?</p>
+      <div id="member-pick-list"></div>
+      <button class="btn btn-primary" onclick="confirmJoin()">Join →</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="screen">
+  <div class="app-header">
+    <div>
+      <div class="group-name" id="app-group-name"></div>
+      <div class="month-title" id="month-title">April</div>
+    </div>
+    <div class="header-btns">
+      <button class="icon-btn" onclick="openReport()">📊</button>
+      <button class="icon-btn" onclick="openSettings()">⚙️</button>
+    </div>
+  </div>
+  <div class="sync-bar">
+    <div class="sync-dot" id="sync-dot"></div>
+    <div class="sync-text" id="sync-text">Connecting…</div>
+  </div>
+  <div class="month-tabs" id="month-tabs"></div>
+  <div class="score-strip" id="score-strip"></div>
+  <div class="cal-wrap">
+    <div class="cal-dow"><span>Su</span><span>Mo</span><span>Tu</span><span>We</span><span>Th</span><span>Fr</span><span>Sa</span></div>
+    <div class="cal-grid" id="cal-grid"></div>
+  </div>
+  <div class="day-panel">
+    <div class="day-heading" id="day-heading"></div>
+    <div class="col-heads" id="col-heads"></div>
+    <div id="act-list"></div>
+  </div>
+  <div class="save-wrap">
+    <button class="save-btn" id="save-btn" onclick="saveDay()">
+      <span id="save-label">Save & Sync</span>
+    </button>
+  </div>
+</div>
+
+<!-- REPORT MODAL -->
+<div class="modal-bg" id="report-modal">
+  <div class="modal">
+    <div class="modal-hd"><h3>Monthly Report</h3><button class="close-btn" onclick="closeReport()">✕</button></div>
+    <div class="modal-bd" id="report-body"></div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal-bg" id="settings-modal">
+  <div class="modal">
+    <div class="modal-hd"><h3>Settings</h3><button class="close-btn" onclick="closeSettings()">✕</button></div>
+    <div class="modal-bd">
+      <div id="settings-info" style="background:var(--bg);border-radius:var(--radius);padding:12px 14px;font-size:14px;line-height:1.8;margin-bottom:1rem;color:var(--muted)"></div>
+      <button class="btn btn-outline" style="margin-bottom:10px" onclick="copyJoinCode()">📋 Copy join code</button>
+      <button class="btn btn-danger" onclick="leaveGroup()">Leave this group</button>
+    </div>
+  </div>
+</div>
+
+<!-- EMOJI PICKER MODAL -->
+<div class="modal-bg" id="emoji-modal">
+  <div class="modal">
+    <div class="modal-hd"><h3>Pick emoji</h3><button class="close-btn" onclick="closeEmojiPicker()">✕</button></div>
+    <div class="emoji-grid" id="emoji-grid"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG — put your Supabase details here ───────────────────────────────────
+// After creating your Supabase project, replace these two lines:
+const SUPA_URL = 'https://tabehpkqensjlpelwsot.supabase.co';      // e.g. https://abcxyz.supabase.co
+const SUPA_KEY = 'sb_publishable_z8pWbyVP86YWjeXxE9tojA_9dHuHBZz'; // your anon/public key
+
+// ── CONSTANTS ────────────────────────────────────────────────────────────────
+const MONTHS=['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MFULL=['April','May','June','July','August','September','October','November','December'];
+const MNUMS=[4,5,6,7,8,9,10,11,12];
+const MDAYS=[30,31,30,31,31,30,31,30,31];
+const DNAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const COLORS=['#1A9E72','#2B7FD4','#7C5CBF','#D4497A','#E06020','#0E9B8A','#E8960A','#C0392B','#2980B9','#8E44AD'];
+const ALL_EMOJIS=['🔮','🧘','🚶','💪','🥗','🥛','💊','📖','🎵','🌙','😴','💧','🏃','🧴','🌅','📝','🎯','🛌','🥦','🏋️','🧠','❤️','🌿','☀️','🍎','🫁','🧘‍♀️','🏊','🚴','🤸','🪴','🧹','✍️','🗣️','🤝','🌊','⚡','🔥','🌸','🍵','☕','🧃','🎨','🎭','🏌️','🎾','🏄','🧗','🤾','⛹️'];
+const DEFAULT_ACTS=[{emoji:'🧘',name:'Meditation'},{emoji:'🚶',name:'Walking'},{emoji:'💪',name:'Exercise'},{emoji:'🥗',name:'Diet'},{emoji:'😴',name:'Sleep'}];
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let grp=null, me=null;
+let localData={}, myTicks={};
+let curMonth=0, curDay=1, isSyncing=false, expandedMonth=null;
+let emojiTarget=null;
+
+// ── SUPABASE API ──────────────────────────────────────────────────────────────
+async function sbGet(table, params='') {
+  const res = await fetch(`${SUPA_URL}/rest/v1/${table}?${params}`, {
+    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' }
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
+async function sbPost(table, body) {
+  const res = await fetch(`${SUPA_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res;
+}
+
+async function sbUpsert(table, body) {
+  const res = await fetch(`${SUPA_URL}/rest/v1/${table}`, {
+    method: 'POST',
+    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return res;
+}
+
+// ── SETUP SCREEN ──────────────────────────────────────────────────────────────
+let setupActivities = DEFAULT_ACTS.map(a => ({id:uid(), ...a}));
+let setupMembers    = [{id:uid(),name:'',color:COLORS[0]},{id:uid(),name:'',color:COLORS[1]}];
+
+function uid() { return Math.random().toString(36).slice(2,9); }
+
+function renderSetup() {
+  document.getElementById('activities-list').innerHTML = setupActivities.map((a,i) => `
+    <div class="act-row-setup">
+      <button class="emoji-btn" onclick="openEmojiPicker('act',${i})">${a.emoji}</button>
+      <input type="text" value="${escHtml(a.name)}" placeholder="Activity name"
+        oninput="setupActivities[${i}].name=this.value">
+      <button class="remove-btn" onclick="removeActivity(${i})" ${setupActivities.length<=1?'style="opacity:0.3;pointer-events:none"':''}>×</button>
+    </div>`).join('');
+
+  document.getElementById('members-list').innerHTML = setupMembers.map((m,i) => `
+    <div class="member-row">
+      <div class="color-dot" style="background:${m.color}" onclick="cycleColor(${i})">${m.name?m.name[0].toUpperCase():'?'}</div>
+      <input type="text" value="${escHtml(m.name)}" placeholder="Member name"
+        oninput="setupMembers[${i}].name=this.value;document.querySelectorAll('.member-row .color-dot')[${i}].textContent=this.value?this.value[0].toUpperCase():'?'">
+      <button class="remove-btn" onclick="removeMember(${i})" ${setupMembers.length<=1?'style="opacity:0.3;pointer-events:none"':''}>×</button>
+    </div>`).join('');
+}
+
+function addActivity()    { setupActivities.push({id:uid(),emoji:ALL_EMOJIS[setupActivities.length%ALL_EMOJIS.length],name:''}); renderSetup(); }
+function removeActivity(i){ if(setupActivities.length<=1)return; setupActivities.splice(i,1); renderSetup(); }
+function addMember()      { setupMembers.push({id:uid(),name:'',color:COLORS[setupMembers.length%COLORS.length]}); renderSetup(); }
+function removeMember(i)  { if(setupMembers.length<=1)return; setupMembers.splice(i,1); renderSetup(); }
+function cycleColor(i)    { const c=COLORS.indexOf(setupMembers[i].color); setupMembers[i].color=COLORS[(c+1)%COLORS.length]; renderSetup(); }
+
+// Emoji picker
+function openEmojiPicker(type,idx) {
+  emojiTarget={type,idx};
+  document.getElementById('emoji-grid').innerHTML = ALL_EMOJIS.map(e=>`<div class="epick" onclick="pickEmoji('${e}')">${e}</div>`).join('');
+  document.getElementById('emoji-modal').classList.add('open');
+}
+function closeEmojiPicker(){ document.getElementById('emoji-modal').classList.remove('open'); }
+function pickEmoji(e) {
+  if(emojiTarget.type==='act') setupActivities[emojiTarget.idx].emoji=e;
+  closeEmojiPicker(); renderSetup();
+}
+
+async function createGroup() {
+  const name  = document.getElementById('grp-name').value.trim();
+  const acts  = setupActivities.filter(a=>a.name.trim());
+  const mems  = setupMembers.filter(m=>m.name.trim());
+  if(!name)           { showToast('Enter a group name',true); return; }
+  if(acts.length===0) { showToast('Add at least one activity',true); return; }
+  if(mems.length===0) { showToast('Add at least one member',true); return; }
+  if(SUPA_URL==='YOUR_SUPABASE_URL') { showToast('Add your Supabase URL first',true); return; }
+
+  const code = genCode();
+  showLoader('Creating your group…');
+  try {
+    await sbPost('groups', { code, name, activities: acts, members: mems });
+    grp = { code, name, activities: acts, members: mems };
+    me  = mems[0];
+    localStorage.setItem('dart_grp', JSON.stringify(grp));
+    localStorage.setItem('dart_me',  JSON.stringify(me));
+    hideLoader();
+    showCodeScreen(code);
+  } catch(e) {
+    hideLoader();
+    showToast('Failed: '+e.message, true);
+  }
+}
+
+function genCode() {
+  const ch='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:6},()=>ch[Math.floor(Math.random()*ch.length)]).join('');
+}
+
+function showCodeScreen(code) {
+  document.getElementById('setup').innerHTML = `
+    <div class="page" style="text-align:center;padding-top:2rem">
+      <div style="font-size:48px;margin-bottom:1rem">🎉</div>
+      <h2 style="font-size:22px;font-weight:700;margin-bottom:0.5rem">Group created!</h2>
+      <p style="font-size:14px;color:var(--muted);margin-bottom:1.5rem">Share this code with your members</p>
+      <div class="code-display">
+        <div class="sub">Join code</div>
+        <div class="code">${code}</div>
+        <div class="sub">Share this with everyone</div>
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:1.5rem;line-height:1.6">
+        Members open DART → "Join with a code" → enter <strong>${code}</strong> → pick their name
+      </p>
+      <button class="btn btn-primary" onclick="goToApp()">Open my tracker →</button>
+    </div>`;
+}
+
+function goToApp() { initApp(); showScreen('app'); }
+
+// ── JOIN SCREEN ───────────────────────────────────────────────────────────────
+let joinedGroup=null, selectedMemberId=null;
+
+async function onCodeInput(el) {
+  const code=el.value.toUpperCase().replace(/[^A-Z0-9]/g,'');
+  el.value=code;
+  document.getElementById('join-members').style.display='none';
+  document.getElementById('join-error').style.display='none';
+  if(code.length!==6) return;
+  if(SUPA_URL==='YOUR_SUPABASE_URL'){ showToast('Supabase not configured',true); return; }
+  showLoader('Finding group…');
+  try {
+    const rows = await sbGet('groups',`code=eq.${code}&select=*`);
+    hideLoader();
+    if(!rows||rows.length===0){
+      document.getElementById('join-error').textContent='Group not found. Check the code.';
+      document.getElementById('join-error').style.display='block';
+      return;
+    }
+    joinedGroup=rows[0];
+    renderMemberPick(joinedGroup.members);
+    document.getElementById('join-members').style.display='block';
+  } catch(e){
+    hideLoader();
+    document.getElementById('join-error').textContent='Connection failed. Check Supabase config.';
+    document.getElementById('join-error').style.display='block';
+  }
+}
+
+function renderMemberPick(members){
+  document.getElementById('member-pick-list').innerHTML=members.map(m=>`
+    <div class="member-option" id="mopt-${m.id}" onclick="selectMember('${m.id}')">
+      <div class="member-avatar" style="background:${m.color}">${m.name[0].toUpperCase()}</div>
+      <div style="font-size:15px;font-weight:600">${escHtml(m.name)}</div>
+    </div>`).join('');
+}
+
+function selectMember(id){
+  selectedMemberId=id;
+  document.querySelectorAll('.member-option').forEach(e=>e.classList.remove('selected'));
+  document.getElementById('mopt-'+id)?.classList.add('selected');
+}
+
+function confirmJoin(){
+  if(!selectedMemberId){showToast('Pick your name first',true);return;}
+  grp=joinedGroup;
+  me=grp.members.find(m=>m.id===selectedMemberId);
+  localStorage.setItem('dart_grp',JSON.stringify(grp));
+  localStorage.setItem('dart_me', JSON.stringify(me));
+  initApp();
+  showScreen('app');
+}
+
+// ── INIT APP ─────────────────────────────────────────────────────────────────
+function initApp(){
+  const today=new Date();
+  curMonth=Math.max(0,Math.min(8,today.getMonth()-3));
+  curDay=today.getDate();
+  expandedMonth=curMonth;
+  const ld=localStorage.getItem('dart_localdata_'+grp.code);
+  const mt=localStorage.getItem('dart_myticks_'+grp.code);
+  if(ld) localData=JSON.parse(ld);
+  if(mt) myTicks=JSON.parse(mt);
+  document.getElementById('app-group-name').textContent=grp.name;
+  renderMonthTabs();
+  render();
+  fetchRemote();
+  setInterval(fetchRemote,30000);
+}
+
+function persist(){
+  localStorage.setItem('dart_localdata_'+grp.code,JSON.stringify(localData));
+  localStorage.setItem('dart_myticks_'+grp.code,JSON.stringify(myTicks));
+}
+
+// ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
+async function fetchRemote(){
+  setSyncStatus('syncing','Syncing…');
+  try {
+    const rows=await sbGet('daily_data',`code=eq.${grp.code}&select=day_key,data`);
+    rows.forEach(row=>{
+      const key=row.day_key;
+      if(!localData[key]) localData[key]={};
+      const d=typeof row.data==='string'?JSON.parse(row.data):row.data;
+      Object.assign(localData[key],d);
+      if(myTicks[key]){
+        Object.keys(myTicks[key]).forEach(aId=>{
+          localData[key][aId+'_'+me.id]=myTicks[key][aId];
+        });
+      }
+    });
+    persist();
+    const now=new Date();
+    setSyncStatus('ok',`Synced ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`);
+  } catch(e){
+    setSyncStatus('offline','Offline — cached data shown');
+  }
+  render();
+}
+
+async function saveDay(){
+  if(isSyncing) return;
+  isSyncing=true;
+  const btn=document.getElementById('save-btn');
+  const lbl=document.getElementById('save-label');
+  btn.classList.add('saving');
+  lbl.innerHTML='<div class="spinner"></div>';
+
+  const key=`${MNUMS[curMonth]}-${curDay}`;
+  if(!localData[key]) localData[key]={};
+  if(!myTicks[key])   myTicks[key]={};
+  Object.keys(myTicks[key]).forEach(aId=>{
+    localData[key][aId+'_'+me.id]=myTicks[key][aId];
+  });
+  persist();
+
+  try {
+    await sbUpsert('daily_data',{code:grp.code, day_key:key, data:localData[key], updated_at:new Date().toISOString()});
+    showToast('Saved ✓');
+    setSyncStatus('ok','Saved just now');
+  } catch(e){
+    showToast('Saved on phone. Will sync when online.');
+  }
+  isSyncing=false;
+  btn.classList.remove('saving');
+  lbl.textContent='Save & Sync';
+  renderCalendar();
+}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function render(){
+  document.getElementById('month-title').textContent=MFULL[curMonth];
+  renderMonthTabs();
+  renderScoreStrip();
+  renderCalendar();
+  renderActivities();
+}
+
+function renderMonthTabs(){
+  document.getElementById('month-tabs').innerHTML=MONTHS.map((m,i)=>
+    `<button class="mtab${i===curMonth?' active':''}" onclick="setMonth(${i})">${m}</button>`
+  ).join('');
+}
+
+function calcScore(memberId,monthIdx){
+  const today=new Date();
+  const isNow=(MNUMS[monthIdx]-1===today.getMonth()&&today.getFullYear()===2026);
+  const days=isNow?today.getDate():MDAYS[monthIdx];
+  let done=0;
+  for(let d=1;d<=days;d++){
+    const dd=localData[`${MNUMS[monthIdx]}-${d}`]||{};
+    grp.activities.forEach(a=>{if(dd[a.id+'_'+memberId]==='done')done++;});
+  }
+  const total=days*grp.activities.length;
+  return total>0?Math.round(done/total*100):null;
+}
+
+function renderScoreStrip(){
+  document.getElementById('score-strip').innerHTML=grp.members.map(m=>{
+    const pct=calcScore(m.id,curMonth);
+    return `<div class="score-card">
+      <div class="score-avatar" style="background:${m.color}">${m.name[0].toUpperCase()}</div>
+      <div>
+        <div class="score-name">${escHtml(m.name)}</div>
+        <div class="score-pct" style="color:${m.color}">${pct!==null?pct+'%':'–'}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderCalendar(){
+  const el=document.getElementById('cal-grid');
+  const firstDOW=new Date(2026,MNUMS[curMonth]-1,1).getDay();
+  const today=new Date();
+  const isNow=(MNUMS[curMonth]-1===today.getMonth()&&today.getFullYear()===2026);
+  let html='';
+  for(let i=0;i<firstDOW;i++) html+=`<div class="cal-cell empty"></div>`;
+  for(let d=1;d<=MDAYS[curMonth];d++){
+    const dow=(firstDOW+d-1)%7;
+    const dd=localData[`${MNUMS[curMonth]}-${d}`]||{};
+    const pips=grp.members.map(m=>{
+      const hasDone=grp.activities.some(a=>dd[a.id+'_'+m.id]==='done');
+      return `<div class="pip" style="background:${hasDone?m.color:'var(--border)'}"></div>`;
+    }).join('');
+    html+=`<div class="cal-cell${(isNow&&d===today.getDate())?' today':''}${d===curDay?' selected':''}" onclick="setDay(${d})">
+      <div class="cd">${DNAMES[dow]}</div><div class="cn">${d}</div>
+      <div class="cpips">${pips}</div>
+    </div>`;
+  }
+  el.innerHTML=html;
+}
+
+function renderActivities(){
+  const key=`${MNUMS[curMonth]}-${curDay}`;
+  const dd=localData[key]||{};
+  const dow=new Date(2026,MNUMS[curMonth]-1,curDay).getDay();
+  document.getElementById('day-heading').textContent=`${DNAMES[dow]}, ${MFULL[curMonth]} ${curDay}`;
+
+  // Column headers
+  document.getElementById('col-heads').innerHTML=
+    `<div class="ch-name">Activity</div>`+
+    grp.members.map(m=>`<div class="ch-user" style="color:${m.color}">${escHtml(m.name.substring(0,5))}</div>`).join('');
+
+  // Rows
+  document.getElementById('act-list').innerHTML=grp.activities.map(a=>{
+    const toggles=grp.members.map(m=>{
+      const val=dd[a.id+'_'+m.id]||'';
+      const isMine=m.id===me.id;
+      const isDone=val==='done', isSkip=val==='skip';
+      const cls=(isDone?'done':isSkip?'skip':'')+' '+(isMine?'mine':'');
+      const ico=isDone?'✓':isSkip?'✗':'';
+      const sty=isDone?`background:${m.color}`:'';
+      return `<div class="act-toggle ${cls}" style="${sty}" ${isMine?`onclick="toggle('${a.id}',event)"`:''} >${ico}</div>`;
+    }).join('');
+    return `<div class="act-row">
+      <span class="act-emoji">${a.emoji}</span>
+      <span class="act-name">${escHtml(a.name)}</span>
+      ${toggles}
+    </div>`;
+  }).join('');
+}
+
+// ── TOGGLE ────────────────────────────────────────────────────────────────────
+function toggle(actId,e){
+  e.stopPropagation();
+  const key=`${MNUMS[curMonth]}-${curDay}`;
+  if(!localData[key]) localData[key]={};
+  if(!myTicks[key])   myTicks[key]={};
+  const cur=myTicks[key][actId]||'';
+  const next=cur===''?'done':cur==='done'?'skip':'';
+  myTicks[key][actId]=next;
+  localData[key][actId+'_'+me.id]=next;
+  persist();
+  renderActivities();
+  renderCalendar();
+  renderScoreStrip();
+}
+
+function setMonth(i){
+  curMonth=i;
+  curDay=(MNUMS[i]-1===new Date().getMonth()&&new Date().getFullYear()===2026)?new Date().getDate():1;
+  render();
+}
+function setDay(d){ curDay=d; renderCalendar(); renderActivities(); }
+
+// ── REPORT ────────────────────────────────────────────────────────────────────
+function openReport(){ expandedMonth=curMonth; renderReport(); document.getElementById('report-modal').classList.add('open'); }
+function closeReport(){ document.getElementById('report-modal').classList.remove('open'); }
+function toggleMonthBreakdown(i){ expandedMonth=expandedMonth===i?null:i; renderReport(); }
+
+function renderReport(){
+  const el=document.getElementById('report-body');
+  const today=new Date();
+
+  // Overall per member
+  const overall=grp.members.map(m=>{
+    let done=0,total=0;
+    MONTHS.forEach((_,mi)=>{
+      const isNow=(MNUMS[mi]-1===today.getMonth()&&today.getFullYear()===2026);
+      const days=isNow?today.getDate():MDAYS[mi];
+      for(let d=1;d<=days;d++){
+        const dd=localData[`${MNUMS[mi]}-${d}`]||{};
+        grp.activities.forEach(a=>{total++;if(dd[a.id+'_'+m.id]==='done')done++;});
+      }
+    });
+    return {...m,pct:total>0?Math.round(done/total*100):0};
+  });
+
+  const monthScores=MONTHS.map((m,i)=>{
+    const isNow=(MNUMS[i]-1===today.getMonth()&&today.getFullYear()===2026);
+    const days=isNow?today.getDate():MDAYS[i];
+    const mScores=grp.members.map(mem=>{
+      let done=0;
+      for(let d=1;d<=days;d++){
+        const dd=localData[`${MNUMS[i]}-${d}`]||{};
+        grp.activities.forEach(a=>{if(dd[a.id+'_'+mem.id]==='done')done++;});
+      }
+      return Math.round(done/(days*grp.activities.length)*100);
+    });
+    const hasData=grp.members.some(mem=>
+      grp.activities.some(a=>{
+        for(let d=1;d<=days;d++){const dd=localData[`${MNUMS[i]}-${d}`]||{};if(dd[a.id+'_'+mem.id])return true;}
+        return false;
+      })
+    );
+    return {m,full:MFULL[i],i,days,mScores,hasData};
+  }).filter(s=>s.hasData);
+
+  if(monthScores.length===0){
+    el.innerHTML='<p style="color:var(--muted);text-align:center;padding:3rem 1rem">No data yet. Start tracking!</p>';
+    return;
+  }
+
+  const r=28,circ=2*Math.PI*r;
+  const cols=Math.min(grp.members.length,4);
+
+  el.innerHTML=`
+    <p style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Overall average</p>
+    <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:8px;margin-bottom:1.5rem">
+      ${overall.map(m=>`
+        <div style="background:var(--bg);border-radius:var(--radius);padding:12px 6px;text-align:center">
+          <svg width="68" height="68" viewBox="0 0 68 68" style="display:block;margin:0 auto 5px">
+            <circle cx="34" cy="34" r="${r}" fill="none" stroke="var(--light)" stroke-width="5.5"/>
+            <circle cx="34" cy="34" r="${r}" fill="none" stroke="${m.color}" stroke-width="5.5"
+              stroke-dasharray="${(m.pct/100*circ).toFixed(1)} ${circ.toFixed(1)}"
+              stroke-linecap="round" transform="rotate(-90 34 34)"/>
+            <text x="34" y="38" text-anchor="middle" font-size="15" font-weight="700" fill="${m.color}">${m.pct}%</text>
+          </svg>
+          <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(m.name)}</div>
+        </div>`).join('')}
+    </div>
+
+    <p style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">By month — tap to expand</p>
+
+    ${monthScores.map(sc=>{
+      const isOpen=expandedMonth===sc.i;
+      const breakdown=isOpen?grp.activities.map(a=>{
+        const isNow2=(MNUMS[sc.i]-1===today.getMonth()&&today.getFullYear()===2026);
+        const days2=isNow2?today.getDate():MDAYS[sc.i];
+        const ms=grp.members.map(mem=>{
+          let done=0;
+          for(let d=1;d<=days2;d++){const dd=localData[`${MNUMS[sc.i]}-${d}`]||{};if(dd[a.id+'_'+mem.id]==='done')done++;}
+          return Math.round(done/days2*100);
+        });
+        return {...a,ms};
+      }):[];
+
+      return `<div class="month-card${isOpen?' open':''}">
+        <div class="month-card-hd" onclick="toggleMonthBreakdown(${sc.i})">
+          <div style="flex:1">
+            <div style="font-size:15px;font-weight:700;margin-bottom:7px">${sc.full}
+              <span style="font-size:11px;font-weight:400;color:var(--muted);margin-left:5px">${sc.days} days</span>
+            </div>
+            ${grp.members.map((m,mi)=>`
+              <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
+                <div style="width:7px;height:7px;border-radius:50%;background:${m.color};flex-shrink:0"></div>
+                <span style="font-size:11px;font-weight:600;color:${m.color};width:56px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(m.name)}</span>
+                <div style="flex:1;height:8px;background:var(--light);border-radius:4px;overflow:hidden">
+                  <div style="width:${sc.mScores[mi]}%;height:100%;background:${m.color};border-radius:4px"></div>
+                </div>
+                <span style="font-size:11px;font-weight:700;color:${m.color};width:26px;text-align:right">${sc.mScores[mi]}%</span>
+              </div>`).join('')}
+          </div>
+          <div class="month-arrow">›</div>
+        </div>
+        ${isOpen?`
+          <div class="month-bd">
+            <div style="display:grid;grid-template-columns:22px 1fr ${grp.members.map(()=>'52px').join(' ')};gap:5px;align-items:center;margin-bottom:8px;padding-bottom:6px;border-bottom:0.5px solid var(--border)">
+              <div></div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Activity</div>
+              ${grp.members.map(m=>`<div style="text-align:center;font-size:9px;font-weight:700;color:${m.color};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(m.name.substring(0,7))}</div>`).join('')}
+            </div>
+            ${breakdown.map(a=>`
+              <div style="display:grid;grid-template-columns:22px 1fr ${grp.members.map(()=>'52px').join(' ')};gap:5px;align-items:center;margin-bottom:10px">
+                <span style="font-size:13px">${a.emoji}</span>
+                <span style="font-size:12px;font-weight:500">${escHtml(a.name)}</span>
+                ${grp.members.map((m,mi)=>`
+                  <div>
+                    <div style="height:5px;background:var(--light);border-radius:3px;overflow:hidden;margin-bottom:2px">
+                      <div style="width:${a.ms[mi]}%;height:100%;background:${m.color};border-radius:3px"></div>
+                    </div>
+                    <div style="text-align:center;font-size:10px;font-weight:700;color:${m.color}">${a.ms[mi]}%</div>
+                  </div>`).join('')}
+              </div>`).join('')}
+          </div>` : ''}
+      </div>`;
+    }).join('')}`;
+}
+
+// ── SETTINGS ─────────────────────────────────────────────────────────────────
+function openSettings(){
+  document.getElementById('settings-info').innerHTML=
+    `Group: <strong style="color:var(--text)">${escHtml(grp.name)}</strong><br>
+     Join code: <strong style="font-family:'DM Mono',monospace;letter-spacing:3px;color:var(--text)">${grp.code}</strong><br>
+     You: <strong style="color:${me.color}">${escHtml(me.name)}</strong>`;
+  document.getElementById('settings-modal').classList.add('open');
+}
+function closeSettings(){ document.getElementById('settings-modal').classList.remove('open'); }
+function copyJoinCode(){
+  navigator.clipboard?.writeText(grp.code).then(()=>showToast('Code copied!')).catch(()=>showToast(grp.code));
+  closeSettings();
+}
+function leaveGroup(){
+  if(confirm('Leave this group? Your data stays in the database.')){
+    localStorage.removeItem('dart_grp');
+    localStorage.removeItem('dart_me');
+    location.reload();
+  }
+}
+
+// ── SCREEN NAV ────────────────────────────────────────────────────────────────
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(id==='setup') renderSetup();
+}
+
+// ── LOADER ────────────────────────────────────────────────────────────────────
+function showLoader(msg='Loading…'){ document.getElementById('loader-text').textContent=msg; document.getElementById('loader').classList.add('show'); }
+function hideLoader(){ document.getElementById('loader').classList.remove('show'); }
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function setSyncStatus(s,t){
+  document.getElementById('sync-dot').className='sync-dot'+(s==='ok'?'':' '+s);
+  document.getElementById('sync-text').textContent=t;
+}
+function showToast(msg,isErr=false){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className='toast'+(isErr?' err':'')+' show';
+  setTimeout(()=>t.className='toast'+(isErr?' err':''),2800);
+}
+function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+// ── START ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',()=>{
+  const sg=localStorage.getItem('dart_grp');
+  const sm=localStorage.getItem('dart_me');
+  if(sg&&sm){
+    grp=JSON.parse(sg); me=JSON.parse(sm);
+    initApp(); showScreen('app');
+  }
+});
+</script>
+</body>
+</html>
