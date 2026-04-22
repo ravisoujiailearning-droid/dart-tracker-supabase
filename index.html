@@ -176,7 +176,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text)}
   <div class="logo-mark"><span>DART</span></div>
   <h1 class="welcome-title">Build better<br>habits together.</h1>
   <p class="welcome-sub">Track daily activities as a group. See everyone's progress in one place.</p>
-  <div class="welcome-btns">
+  <div class="welcome-btns" id="welcome-btns">
     <button class="btn btn-primary" onclick="showScreen('setup')">Create a group</button>
     <button class="btn btn-outline" onclick="showScreen('join')">Join with a code</button>
   </div>
@@ -229,9 +229,13 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text)}
       <button class="icon-btn" onclick="openSettings()">⚙️</button>
     </div>
   </div>
-  <div class="sync-bar">
-    <div class="sync-dot" id="sync-dot"></div>
-    <div class="sync-text" id="sync-text">Connecting…</div>
+  <!-- Who you are tag -->
+  <div style="padding:2px 1rem 0;display:flex;align-items:center;justify-content:space-between">
+    <div class="sync-bar" style="padding:0">
+      <div class="sync-dot" id="sync-dot"></div>
+      <div class="sync-text" id="sync-text">Connecting…</div>
+    </div>
+    <div id="me-tag" style="font-size:12px;font-weight:600;padding:3px 10px;border-radius:20px;color:#fff"></div>
   </div>
   <div class="month-tabs" id="month-tabs"></div>
   <div class="score-strip" id="score-strip"></div>
@@ -264,9 +268,40 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text)}
   <div class="modal">
     <div class="modal-hd"><h3>Settings</h3><button class="close-btn" onclick="closeSettings()">✕</button></div>
     <div class="modal-bd">
-      <div id="settings-info" style="background:var(--bg);border-radius:var(--radius);padding:12px 14px;font-size:14px;line-height:1.8;margin-bottom:1rem;color:var(--muted)"></div>
+      <div id="settings-info" style="background:var(--bg);border-radius:var(--radius);padding:12px 14px;font-size:14px;line-height:1.9;margin-bottom:1rem;color:var(--muted)"></div>
       <button class="btn btn-outline" style="margin-bottom:10px" onclick="copyJoinCode()">📋 Copy join code</button>
+      <button class="btn btn-outline" style="margin-bottom:10px" onclick="openAdminPanel()">🔧 Edit group (admin only)</button>
       <button class="btn btn-danger" onclick="leaveGroup()">Leave this group</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADMIN PANEL MODAL -->
+<div class="modal-bg" id="admin-modal">
+  <div class="modal">
+    <div class="modal-hd"><h3>Group Admin</h3><button class="close-btn" onclick="closeAdminModal()">✕</button></div>
+    <div class="modal-bd" id="admin-body">
+      <!-- PIN verify first, then edit form -->
+      <div id="admin-pin-section">
+        <p style="font-size:14px;color:var(--muted);margin-bottom:1rem">Enter the 4-digit admin PIN to edit this group.</p>
+        <div class="field"><label>Admin PIN</label>
+          <input type="number" id="admin-pin-input" maxlength="4" placeholder="••••" style="letter-spacing:6px;font-size:20px;text-align:center">
+        </div>
+        <button class="btn btn-primary" onclick="verifyAdminPin()">Unlock →</button>
+      </div>
+      <div id="admin-edit-section" style="display:none">
+        <div class="field"><label>Group name</label>
+          <input type="text" id="edit-grp-name" maxlength="40">
+        </div>
+        <div class="section-label">Activities</div>
+        <div id="edit-activities-list"></div>
+        <button class="add-btn" onclick="addEditActivity()">＋ Add activity</button>
+        <div class="section-label">Members</div>
+        <div id="edit-members-list"></div>
+        <button class="add-btn" onclick="addEditMember()">＋ Add member</button>
+        <button class="btn btn-primary" style="margin-top:1.5rem" onclick="saveGroupEdits()">Save changes</button>
+        <button class="btn btn-danger" style="margin-top:10px" onclick="deleteGroup()">Delete group permanently</button>
+      </div>
     </div>
   </div>
 </div>
@@ -282,190 +317,225 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text)}
 <div class="toast" id="toast"></div>
 
 <script>
+
 // ── SCREEN NAV — defined first so onclick buttons always work ─────────────────
 function showScreen(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   if(id==='setup') renderSetup();
+  if(id==='welcome') renderWelcomeBtns();
 }
 
-// ── CONFIG — put your Supabase details here ───────────────────────────────────
-// After creating your Supabase project, replace these two lines:
-const SUPA_URL = 'https://tabehpkqensjlpelwsot.supabase.co';      // e.g. https://abcxyz.supabase.co
-const SUPA_KEY = 'sb_publishable_z8pWbyVP86YWjeXxE9tojA_9dHuHBZz'; // your anon/public key
+function renderWelcomeBtns(){
+  const saved=JSON.parse(localStorage.getItem('dart_known_groups')||'[]');
+  const el=document.getElementById('welcome-btns');
+  if(saved.length>0){
+    el.innerHTML=`
+      <button class="btn btn-primary" onclick="showKnownGroups()">My groups</button>
+      <button class="btn btn-outline" onclick="showScreen('join')">Join with a code</button>
+      <button class="btn" style="font-size:13px;color:var(--muted);background:none;padding:8px" onclick="showScreen('setup')">＋ Create a new group</button>`;
+  }else{
+    el.innerHTML=`
+      <button class="btn btn-primary" onclick="showScreen('setup')">Create a group</button>
+      <button class="btn btn-outline" onclick="showScreen('join')">Join with a code</button>`;
+  }
+}
 
-// ── CONSTANTS ────────────────────────────────────────────────────────────────
+function showKnownGroups(){
+  const saved=JSON.parse(localStorage.getItem('dart_known_groups')||'[]');
+  const el=document.getElementById('welcome-btns');
+  el.innerHTML=`
+    <p style="font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Your groups</p>
+    ${saved.map(g=>`
+      <button class="btn btn-outline" style="display:flex;align-items:center;gap:10px;text-align:left;padding:12px 16px" onclick="rejoinGroup('${g.code}','${g.meId}')">
+        <span style="font-size:20px">👥</span>
+        <span>
+          <span style="display:block;font-size:14px;font-weight:600">${escHtml(g.groupName)}</span>
+          <span style="display:block;font-size:12px;color:var(--muted);font-weight:400">as ${escHtml(g.meName)} · ${g.code}</span>
+        </span>
+      </button>`).join('')}
+    <button class="btn btn-outline" style="margin-top:4px" onclick="showScreen('join')">Join another group</button>
+    <button class="btn" style="font-size:13px;color:var(--muted);background:none;padding:8px" onclick="showScreen('setup')">＋ Create a new group</button>`;
+}
+
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const SUPA_URL='https://tabehpkqensjlpelwsot.supabase.co';
+const SUPA_KEY='sb_publishable_z8pWbyVP86YWjeXxE9tojA_9dHuHBZz';
+
+// ── CONSTANTS ─────────────────────────────────────────────────────────────────
 const MONTHS=['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const MFULL=['April','May','June','July','August','September','October','November','December'];
 const MNUMS=[4,5,6,7,8,9,10,11,12];
 const MDAYS=[30,31,30,31,31,30,31,30,31];
 const DNAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const COLORS=['#1A9E72','#2B7FD4','#7C5CBF','#D4497A','#E06020','#0E9B8A','#E8960A','#C0392B','#2980B9','#8E44AD'];
-const ALL_EMOJIS=['🔮','🧘','🚶','💪','🥗','🥛','💊','📖','🎵','🌙','😴','💧','🏃','🧴','🌅','📝','🎯','🛌','🥦','🏋️','🧠','❤️','🌿','☀️','🍎','🫁','🧘‍♀️','🏊','🚴','🤸','🪴','🧹','✍️','🗣️','🤝','🌊','⚡','🔥','🌸','🍵','☕','🧃','🎨','🎭','🏌️','🎾','🏄','🧗','🤾','⛹️'];
+const ALL_EMOJIS=['🔮','🧘','🚶','💪','🥗','🥛','💊','📖','🎵','🌙','😴','💧','🏃','🧴','🌅','📝','🎯','🛌','🥦','🏋️','🧠','❤️','🌿','☀️','🍎','🧘‍♀️','🏊','🚴','🤸','🪴','🧹','✍️','🗣️','🤝','🌊','⚡','🔥','🌸','🍵','☕','🧃','🎨','🎭','🎾','🏄','🧗'];
 const DEFAULT_ACTS=[{emoji:'🧘',name:'Meditation'},{emoji:'🚶',name:'Walking'},{emoji:'💪',name:'Exercise'},{emoji:'🥗',name:'Diet'},{emoji:'😴',name:'Sleep'}];
 
-// ── STATE ────────────────────────────────────────────────────────────────────
-let grp=null, me=null;
-let localData={}, myTicks={};
-let curMonth=0, curDay=1, isSyncing=false, expandedMonth=null;
-let emojiTarget=null;
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let grp=null,me=null;
+let localData={},myTicks={};
+let curMonth=0,curDay=1,isSyncing=false,expandedMonth=null,emojiTarget=null;
 
 // ── SUPABASE API ──────────────────────────────────────────────────────────────
-async function sbGet(table, params='') {
-  const res = await fetch(`${SUPA_URL}/rest/v1/${table}?${params}`, {
-    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json' }
+async function sbGet(table,params=''){
+  const res=await fetch(`${SUPA_URL}/rest/v1/${table}?${params}`,{
+    headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'}
   });
-  if (!res.ok) throw new Error(await res.text());
+  if(!res.ok)throw new Error(await res.text());
   return res.json();
 }
-
-async function sbPost(table, body) {
-  const res = await fetch(`${SUPA_URL}/rest/v1/${table}`, {
-    method: 'POST',
-    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-    body: JSON.stringify(body)
+async function sbPost(table,body){
+  const res=await fetch(`${SUPA_URL}/rest/v1/${table}`,{
+    method:'POST',
+    headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,'Content-Type':'application/json',Prefer:'return=minimal'},
+    body:JSON.stringify(body)
   });
-  if (!res.ok) throw new Error(await res.text());
-  return res;
+  if(!res.ok)throw new Error(await res.text());
+}
+async function sbUpsert(table,body){
+  const res=await fetch(`${SUPA_URL}/rest/v1/${table}`,{
+    method:'POST',
+    headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates,return=minimal'},
+    body:JSON.stringify(body)
+  });
+  if(!res.ok)throw new Error(await res.text());
+}
+async function sbPatch(table,params,body){
+  const res=await fetch(`${SUPA_URL}/rest/v1/${table}?${params}`,{
+    method:'PATCH',
+    headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`,'Content-Type':'application/json'},
+    body:JSON.stringify(body)
+  });
+  if(!res.ok)throw new Error(await res.text());
+}
+async function sbDelete(table,params){
+  const res=await fetch(`${SUPA_URL}/rest/v1/${table}?${params}`,{
+    method:'DELETE',
+    headers:{apikey:SUPA_KEY,Authorization:`Bearer ${SUPA_KEY}`}
+  });
+  if(!res.ok)throw new Error(await res.text());
 }
 
-async function sbUpsert(table, body) {
-  const res = await fetch(`${SUPA_URL}/rest/v1/${table}`, {
-    method: 'POST',
-    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}`, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
-    body: JSON.stringify(body)
-  });
-  if (!res.ok) throw new Error(await res.text());
-  return res;
-}
+// ── SETUP ─────────────────────────────────────────────────────────────────────
+let setupActivities=DEFAULT_ACTS.map(a=>({id:uid(),...a}));
+let setupMembers=[{id:uid(),name:'',color:COLORS[0]},{id:uid(),name:'',color:COLORS[1]}];
+function uid(){return Math.random().toString(36).slice(2,9);}
 
-// ── SETUP SCREEN ──────────────────────────────────────────────────────────────
-let setupActivities = DEFAULT_ACTS.map(a => ({id:uid(), ...a}));
-let setupMembers    = [{id:uid(),name:'',color:COLORS[0]},{id:uid(),name:'',color:COLORS[1]}];
-
-function uid() { return Math.random().toString(36).slice(2,9); }
-
-function renderSetup() {
-  document.getElementById('activities-list').innerHTML = setupActivities.map((a,i) => `
+function renderSetup(){
+  document.getElementById('activities-list').innerHTML=setupActivities.map((a,i)=>`
     <div class="act-row-setup">
-      <button class="emoji-btn" onclick="openEmojiPicker('act',${i})">${a.emoji}</button>
-      <input type="text" value="${escHtml(a.name)}" placeholder="Activity name"
-        oninput="setupActivities[${i}].name=this.value">
-      <button class="remove-btn" onclick="removeActivity(${i})" ${setupActivities.length<=1?'style="opacity:0.3;pointer-events:none"':''}>×</button>
+      <button class="emoji-btn" onclick="openEmojiPicker('act',${i},'setup')">${a.emoji}</button>
+      <input type="text" value="${escHtml(a.name)}" placeholder="Activity name" oninput="setupActivities[${i}].name=this.value">
+      <button class="remove-btn" onclick="removeAct(${i})" ${setupActivities.length<=1?'style="opacity:0.3;pointer-events:none"':''}>×</button>
     </div>`).join('');
-
-  document.getElementById('members-list').innerHTML = setupMembers.map((m,i) => `
+  document.getElementById('members-list').innerHTML=setupMembers.map((m,i)=>`
     <div class="member-row">
-      <div class="color-dot" style="background:${m.color}" onclick="cycleColor(${i})">${m.name?m.name[0].toUpperCase():'?'}</div>
+      <div class="color-dot" style="background:${m.color}" onclick="cycleColor(${i},'setup')">${m.name?m.name[0].toUpperCase():'?'}</div>
       <input type="text" value="${escHtml(m.name)}" placeholder="Member name"
-        oninput="setupMembers[${i}].name=this.value;document.querySelectorAll('.member-row .color-dot')[${i}].textContent=this.value?this.value[0].toUpperCase():'?'">
-      <button class="remove-btn" onclick="removeMember(${i})" ${setupMembers.length<=1?'style="opacity:0.3;pointer-events:none"':''}>×</button>
+        oninput="setupMembers[${i}].name=this.value;document.querySelectorAll('#members-list .color-dot')[${i}].textContent=this.value?this.value[0].toUpperCase():'?'">
+      <button class="remove-btn" onclick="removeMem(${i},'setup')" ${setupMembers.length<=1?'style="opacity:0.3;pointer-events:none"':''}>×</button>
     </div>`).join('');
 }
 
-function addActivity()    { setupActivities.push({id:uid(),emoji:ALL_EMOJIS[setupActivities.length%ALL_EMOJIS.length],name:''}); renderSetup(); }
-function removeActivity(i){ if(setupActivities.length<=1)return; setupActivities.splice(i,1); renderSetup(); }
-function addMember()      { setupMembers.push({id:uid(),name:'',color:COLORS[setupMembers.length%COLORS.length]}); renderSetup(); }
-function removeMember(i)  { if(setupMembers.length<=1)return; setupMembers.splice(i,1); renderSetup(); }
-function cycleColor(i)    { const c=COLORS.indexOf(setupMembers[i].color); setupMembers[i].color=COLORS[(c+1)%COLORS.length]; renderSetup(); }
+function addActivity(){setupActivities.push({id:uid(),emoji:ALL_EMOJIS[setupActivities.length%ALL_EMOJIS.length],name:''});renderSetup();}
+function removeAct(i){if(setupActivities.length<=1)return;setupActivities.splice(i,1);renderSetup();}
+function addMember(){setupMembers.push({id:uid(),name:'',color:COLORS[setupMembers.length%COLORS.length]});renderSetup();}
+function removeMem(i,ctx){
+  if(ctx==='setup'){if(setupMembers.length<=1)return;setupMembers.splice(i,1);renderSetup();}
+  else{if(editMembers.length<=1)return;editMembers.splice(i,1);renderEditForm();}
+}
+function cycleColor(i,ctx){
+  if(ctx==='setup'){const c=COLORS.indexOf(setupMembers[i].color);setupMembers[i].color=COLORS[(c+1)%COLORS.length];renderSetup();}
+  else{const c=COLORS.indexOf(editMembers[i].color);editMembers[i].color=COLORS[(c+1)%COLORS.length];renderEditForm();}
+}
 
-// Emoji picker
-function openEmojiPicker(type,idx) {
-  emojiTarget={type,idx};
-  document.getElementById('emoji-grid').innerHTML = ALL_EMOJIS.map(e=>`<div class="epick" onclick="pickEmoji('${e}')">${e}</div>`).join('');
+function openEmojiPicker(type,idx,ctx){
+  emojiTarget={type,idx,ctx};
+  document.getElementById('emoji-grid').innerHTML=ALL_EMOJIS.map(e=>`<div class="epick" onclick="pickEmoji('${e}')">${e}</div>`).join('');
   document.getElementById('emoji-modal').classList.add('open');
 }
-function closeEmojiPicker(){ document.getElementById('emoji-modal').classList.remove('open'); }
-function pickEmoji(e) {
-  if(emojiTarget.type==='act') setupActivities[emojiTarget.idx].emoji=e;
-  closeEmojiPicker(); renderSetup();
+function closeEmojiPicker(){document.getElementById('emoji-modal').classList.remove('open');}
+function pickEmoji(e){
+  if(emojiTarget.ctx==='setup')setupActivities[emojiTarget.idx].emoji=e;
+  else editActivities[emojiTarget.idx].emoji=e;
+  closeEmojiPicker();
+  if(emojiTarget.ctx==='setup')renderSetup();else renderEditForm();
 }
 
-async function createGroup() {
-  const name  = document.getElementById('grp-name').value.trim();
-  const acts  = setupActivities.filter(a=>a.name.trim());
-  const mems  = setupMembers.filter(m=>m.name.trim());
-  if(!name)           { showToast('Enter a group name',true); return; }
-  if(acts.length===0) { showToast('Add at least one activity',true); return; }
-  if(mems.length===0) { showToast('Add at least one member',true); return; }
-  if(SUPA_URL==='YOUR_SUPABASE_URL') { showToast('Add your Supabase URL first',true); return; }
-
-  const code = genCode();
+async function createGroup(){
+  const name=document.getElementById('grp-name').value.trim();
+  const acts=setupActivities.filter(a=>a.name.trim());
+  const mems=setupMembers.filter(m=>m.name.trim());
+  if(!name){showToast('Enter a group name',true);return;}
+  if(acts.length===0){showToast('Add at least one activity',true);return;}
+  if(mems.length===0){showToast('Add at least one member',true);return;}
+  if(SUPA_URL==='YOUR_SUPABASE_URL'){showToast('Configure Supabase credentials first',true);return;}
+  const code=genCode();
+  const pin=String(Math.floor(1000+Math.random()*9000));
   showLoader('Creating your group…');
-  try {
-    await sbPost('groups', { code, name, activities: acts, members: mems });
-    grp = { code, name, activities: acts, members: mems };
-    me  = mems[0];
-    localStorage.setItem('dart_grp', JSON.stringify(grp));
-    localStorage.setItem('dart_me',  JSON.stringify(me));
+  try{
+    await sbPost('groups',{code,name,activities:acts,members:mems,admin_pin:pin});
+    grp={code,name,activities:acts,members:mems,admin_pin:pin};
+    me=mems[0];
+    saveSession();
     hideLoader();
-    showCodeScreen(code);
-  } catch(e) {
-    hideLoader();
-    showToast('Failed: '+e.message, true);
-  }
+    showCodeScreen(code,pin);
+  }catch(e){hideLoader();showToast('Failed: '+e.message,true);}
 }
 
-function genCode() {
-  const ch='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  return Array.from({length:6},()=>ch[Math.floor(Math.random()*ch.length)]).join('');
-}
+function genCode(){const ch='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';return Array.from({length:6},()=>ch[Math.floor(Math.random()*ch.length)]).join('');}
 
-function showCodeScreen(code) {
-  document.getElementById('setup').innerHTML = `
+function showCodeScreen(code,pin){
+  document.getElementById('setup').innerHTML=`
     <div class="page" style="text-align:center;padding-top:2rem">
       <div style="font-size:48px;margin-bottom:1rem">🎉</div>
       <h2 style="font-size:22px;font-weight:700;margin-bottom:0.5rem">Group created!</h2>
-      <p style="font-size:14px;color:var(--muted);margin-bottom:1.5rem">Share this code with your members</p>
+      <p style="font-size:14px;color:var(--muted);margin-bottom:1.5rem">Share the join code with your members</p>
       <div class="code-display">
         <div class="sub">Join code</div>
         <div class="code">${code}</div>
-        <div class="sub">Share this with everyone</div>
+        <div class="sub">Share with everyone</div>
+      </div>
+      <div style="background:#fff8e6;border-radius:14px;padding:1rem;margin:1rem 0;text-align:left">
+        <div style="font-size:11px;font-weight:700;color:var(--amber);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">⚠️ Admin PIN — save this!</div>
+        <div style="font-family:'DM Mono',monospace;font-size:28px;font-weight:500;letter-spacing:8px;color:var(--text)">${pin}</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px">You need this to edit or delete the group. Keep it safe.</div>
       </div>
       <p style="font-size:13px;color:var(--muted);margin-bottom:1.5rem;line-height:1.6">
-        Members open DART → "Join with a code" → enter <strong>${code}</strong> → pick their name
+        Members: open DART → Join with a code → enter <strong>${code}</strong> → pick name
       </p>
       <button class="btn btn-primary" onclick="goToApp()">Open my tracker →</button>
     </div>`;
 }
+function goToApp(){initApp();showScreen('app');}
 
-function goToApp() { initApp(); showScreen('app'); }
+// ── JOIN ──────────────────────────────────────────────────────────────────────
+let joinedGroup=null,selectedMemberId=null;
 
-// ── JOIN SCREEN ───────────────────────────────────────────────────────────────
-let joinedGroup=null, selectedMemberId=null;
-
-async function onCodeInput(el) {
+async function onCodeInput(el){
   const code=el.value.toUpperCase().replace(/[^A-Z0-9]/g,'');
   el.value=code;
   document.getElementById('join-members').style.display='none';
   document.getElementById('join-error').style.display='none';
-  if(code.length!==6) return;
-  if(SUPA_URL==='YOUR_SUPABASE_URL'){ showToast('Supabase not configured',true); return; }
+  if(code.length!==6)return;
+  if(SUPA_URL==='YOUR_SUPABASE_URL'){showToast('Supabase not configured',true);return;}
   showLoader('Finding group…');
-  try {
-    const rows = await sbGet('groups',`code=eq.${code}&select=*`);
+  try{
+    const rows=await sbGet('groups',`code=eq.${code}&select=*`);
     hideLoader();
     if(!rows||rows.length===0){
       document.getElementById('join-error').textContent='Group not found. Check the code.';
-      document.getElementById('join-error').style.display='block';
-      return;
+      document.getElementById('join-error').style.display='block';return;
     }
     joinedGroup=rows[0];
-    renderMemberPick(joinedGroup.members);
+    document.getElementById('member-pick-list').innerHTML=joinedGroup.members.map(m=>`
+      <div class="member-option" id="mopt-${m.id}" onclick="selectMember('${m.id}')">
+        <div class="member-avatar" style="background:${m.color}">${m.name[0].toUpperCase()}</div>
+        <div style="font-size:15px;font-weight:600">${escHtml(m.name)}</div>
+      </div>`).join('');
     document.getElementById('join-members').style.display='block';
-  } catch(e){
-    hideLoader();
-    document.getElementById('join-error').textContent='Connection failed. Check Supabase config.';
-    document.getElementById('join-error').style.display='block';
-  }
-}
-
-function renderMemberPick(members){
-  document.getElementById('member-pick-list').innerHTML=members.map(m=>`
-    <div class="member-option" id="mopt-${m.id}" onclick="selectMember('${m.id}')">
-      <div class="member-avatar" style="background:${m.color}">${m.name[0].toUpperCase()}</div>
-      <div style="font-size:15px;font-weight:600">${escHtml(m.name)}</div>
-    </div>`).join('');
+  }catch(e){hideLoader();document.getElementById('join-error').textContent='Connection failed.';document.getElementById('join-error').style.display='block';}
 }
 
 function selectMember(id){
@@ -473,179 +543,180 @@ function selectMember(id){
   document.querySelectorAll('.member-option').forEach(e=>e.classList.remove('selected'));
   document.getElementById('mopt-'+id)?.classList.add('selected');
 }
-
 function confirmJoin(){
   if(!selectedMemberId){showToast('Pick your name first',true);return;}
-  grp=joinedGroup;
-  me=grp.members.find(m=>m.id===selectedMemberId);
-  localStorage.setItem('dart_grp',JSON.stringify(grp));
-  localStorage.setItem('dart_me', JSON.stringify(me));
-  initApp();
-  showScreen('app');
+  grp=joinedGroup;me=grp.members.find(m=>m.id===selectedMemberId);
+  saveSession();initApp();showScreen('app');
 }
 
-// ── INIT APP ─────────────────────────────────────────────────────────────────
-function initApp(){
-  const today=new Date();
-  curMonth=Math.max(0,Math.min(8,today.getMonth()-3));
-  curDay=today.getDate();
-  expandedMonth=curMonth;
-  const ld=localStorage.getItem('dart_localdata_'+grp.code);
-  const mt=localStorage.getItem('dart_myticks_'+grp.code);
-  if(ld) localData=JSON.parse(ld);
-  if(mt) myTicks=JSON.parse(mt);
-  document.getElementById('app-group-name').textContent=grp.name;
-  renderMonthTabs();
-  render();
-  fetchRemote();
-  setInterval(fetchRemote,30000);
+async function rejoinGroup(code,meId){
+  showLoader('Loading…');
+  try{
+    const rows=await sbGet('groups',`code=eq.${code}&select=*`);
+    if(!rows||rows.length===0){showToast('Group not found',true);hideLoader();return;}
+    grp=rows[0];me=grp.members.find(m=>m.id===meId);
+    if(!me){showToast('Member not found',true);hideLoader();return;}
+    saveSession();hideLoader();initApp();showScreen('app');
+  }catch(e){hideLoader();showToast('Connection failed',true);}
 }
 
+// ── SESSION ───────────────────────────────────────────────────────────────────
+function saveSession(){
+  localStorage.setItem('dart_grp_'+grp.code,JSON.stringify(grp));
+  localStorage.setItem('dart_me_'+grp.code,JSON.stringify(me));
+  const known=JSON.parse(localStorage.getItem('dart_known_groups')||'[]');
+  const exists=known.find(g=>g.code===grp.code);
+  if(!exists)known.push({code:grp.code,groupName:grp.name,meId:me.id,meName:me.name});
+  else{exists.groupName=grp.name;exists.meName=me.name;}
+  localStorage.setItem('dart_known_groups',JSON.stringify(known));
+}
 function persist(){
   localStorage.setItem('dart_localdata_'+grp.code,JSON.stringify(localData));
   localStorage.setItem('dart_myticks_'+grp.code,JSON.stringify(myTicks));
 }
 
-// ── SUPABASE SYNC ─────────────────────────────────────────────────────────────
+// ── INIT APP ──────────────────────────────────────────────────────────────────
+function initApp(){
+  const today=new Date();
+  curMonth=Math.max(0,Math.min(8,today.getMonth()-3));
+  curDay=today.getDate();
+  expandedMonth=curMonth;
+  localData={};myTicks={};
+  const ld=localStorage.getItem('dart_localdata_'+grp.code);
+  const mt=localStorage.getItem('dart_myticks_'+grp.code);
+  if(ld)localData=JSON.parse(ld);
+  if(mt)myTicks=JSON.parse(mt);
+  document.getElementById('app-group-name').textContent=grp.name;
+  const tag=document.getElementById('me-tag');
+  tag.textContent=me.name;tag.style.background=me.color;
+  renderMonthTabs();render();
+  fetchRemote();
+  setInterval(fetchRemote,30000);
+}
+
+// ── FETCH — one row per member per day ────────────────────────────────────────
 async function fetchRemote(){
   setSyncStatus('syncing','Syncing…');
-  try {
-    const rows=await sbGet('daily_data',`code=eq.${grp.code}&select=day_key,data`);
+  try{
+    const rows=await sbGet('daily_data',`code=eq.${grp.code}&select=day_key,member_id,data`);
     rows.forEach(row=>{
       const key=row.day_key;
-      if(!localData[key]) localData[key]={};
+      if(!localData[key])localData[key]={};
       const d=typeof row.data==='string'?JSON.parse(row.data):row.data;
-      Object.assign(localData[key],d);
-      if(myTicks[key]){
-        Object.keys(myTicks[key]).forEach(aId=>{
-          localData[key][aId+'_'+me.id]=myTicks[key][aId];
-        });
+      // Only update other members' data — never overwrite my own ticks
+      if(row.member_id!==me.id){
+        localData[key][row.member_id]=d;
       }
+    });
+    // Always re-apply my ticks on top
+    Object.keys(myTicks).forEach(key=>{
+      if(!localData[key])localData[key]={};
+      localData[key][me.id]=myTicks[key];
     });
     persist();
     const now=new Date();
     setSyncStatus('ok',`Synced ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`);
-  } catch(e){
+  }catch(e){
     setSyncStatus('offline','Offline — cached data shown');
   }
   render();
 }
 
+// ── SAVE — upserts only MY row ────────────────────────────────────────────────
 async function saveDay(){
-  if(isSyncing) return;
+  if(isSyncing)return;
   isSyncing=true;
   const btn=document.getElementById('save-btn');
   const lbl=document.getElementById('save-label');
-  btn.classList.add('saving');
-  lbl.innerHTML='<div class="spinner"></div>';
-
+  btn.classList.add('saving');lbl.innerHTML='<div class="spinner"></div>';
   const key=`${MNUMS[curMonth]}-${curDay}`;
-  if(!localData[key]) localData[key]={};
-  if(!myTicks[key])   myTicks[key]={};
-  Object.keys(myTicks[key]).forEach(aId=>{
-    localData[key][aId+'_'+me.id]=myTicks[key][aId];
-  });
+  if(!localData[key])localData[key]={};
+  localData[key][me.id]=myTicks[key]||{};
   persist();
-
-  try {
-    await sbUpsert('daily_data',{code:grp.code, day_key:key, data:localData[key], updated_at:new Date().toISOString()});
-    showToast('Saved ✓');
-    setSyncStatus('ok','Saved just now');
-  } catch(e){
-    showToast(e+'Saved on phone. Will sync when online.');
-  }
-  isSyncing=false;
-  btn.classList.remove('saving');
-  lbl.textContent='Save & Sync';
+  try{
+    // unique(code, day_key, member_id) — Ravi and Soujanya never conflict
+    await sbUpsert('daily_data',{
+      code:grp.code,day_key:key,member_id:me.id,
+      data:myTicks[key]||{},updated_at:new Date().toISOString()
+    });
+    showToast('Saved ✓');setSyncStatus('ok','Saved just now');
+  }catch(e){showToast('Saved on phone. Will sync when online.');}
+  isSyncing=false;btn.classList.remove('saving');lbl.textContent='Save & Sync';
   renderCalendar();
 }
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
 function render(){
   document.getElementById('month-title').textContent=MFULL[curMonth];
-  renderMonthTabs();
-  renderScoreStrip();
-  renderCalendar();
-  renderActivities();
+  renderMonthTabs();renderScoreStrip();renderCalendar();renderActivities();
 }
-
 function renderMonthTabs(){
   document.getElementById('month-tabs').innerHTML=MONTHS.map((m,i)=>
-    `<button class="mtab${i===curMonth?' active':''}" onclick="setMonth(${i})">${m}</button>`
-  ).join('');
+    `<button class="mtab${i===curMonth?' active':''}" onclick="setMonth(${i})">${m}</button>`).join('');
 }
-
+function getVal(key,memberId,actId){
+  return(localData[key]&&localData[key][memberId]&&localData[key][memberId][actId])||'';
+}
 function calcScore(memberId,monthIdx){
   const today=new Date();
   const isNow=(MNUMS[monthIdx]-1===today.getMonth()&&today.getFullYear()===2026);
   const days=isNow?today.getDate():MDAYS[monthIdx];
   let done=0;
-  for(let d=1;d<=days;d++){
-    const dd=localData[`${MNUMS[monthIdx]}-${d}`]||{};
-    grp.activities.forEach(a=>{if(dd[a.id+'_'+memberId]==='done')done++;});
-  }
+  for(let d=1;d<=days;d++) grp.activities.forEach(a=>{if(getVal(`${MNUMS[monthIdx]}-${d}`,memberId,a.id)==='done')done++;});
   const total=days*grp.activities.length;
   return total>0?Math.round(done/total*100):null;
 }
-
 function renderScoreStrip(){
   document.getElementById('score-strip').innerHTML=grp.members.map(m=>{
     const pct=calcScore(m.id,curMonth);
-    return `<div class="score-card">
+    const isMe=m.id===me.id;
+    return`<div class="score-card" style="${isMe?'border-color:'+m.color+';border-width:2px':''}">
       <div class="score-avatar" style="background:${m.color}">${m.name[0].toUpperCase()}</div>
       <div>
-        <div class="score-name">${escHtml(m.name)}</div>
+        <div class="score-name">${escHtml(m.name)}${isMe?' 👈':''}</div>
         <div class="score-pct" style="color:${m.color}">${pct!==null?pct+'%':'–'}</div>
       </div>
     </div>`;
   }).join('');
 }
-
 function renderCalendar(){
   const el=document.getElementById('cal-grid');
   const firstDOW=new Date(2026,MNUMS[curMonth]-1,1).getDay();
   const today=new Date();
   const isNow=(MNUMS[curMonth]-1===today.getMonth()&&today.getFullYear()===2026);
   let html='';
-  for(let i=0;i<firstDOW;i++) html+=`<div class="cal-cell empty"></div>`;
+  for(let i=0;i<firstDOW;i++)html+=`<div class="cal-cell empty"></div>`;
   for(let d=1;d<=MDAYS[curMonth];d++){
     const dow=(firstDOW+d-1)%7;
-    const dd=localData[`${MNUMS[curMonth]}-${d}`]||{};
+    const key=`${MNUMS[curMonth]}-${d}`;
     const pips=grp.members.map(m=>{
-      const hasDone=grp.activities.some(a=>dd[a.id+'_'+m.id]==='done');
-      return `<div class="pip" style="background:${hasDone?m.color:'var(--border)'}"></div>`;
+      const hasDone=grp.activities.some(a=>getVal(key,m.id,a.id)==='done');
+      return`<div class="pip" style="background:${hasDone?m.color:'var(--border)'}"></div>`;
     }).join('');
     html+=`<div class="cal-cell${(isNow&&d===today.getDate())?' today':''}${d===curDay?' selected':''}" onclick="setDay(${d})">
-      <div class="cd">${DNAMES[dow]}</div><div class="cn">${d}</div>
-      <div class="cpips">${pips}</div>
+      <div class="cd">${DNAMES[dow]}</div><div class="cn">${d}</div><div class="cpips">${pips}</div>
     </div>`;
   }
   el.innerHTML=html;
 }
-
 function renderActivities(){
   const key=`${MNUMS[curMonth]}-${curDay}`;
-  const dd=localData[key]||{};
   const dow=new Date(2026,MNUMS[curMonth]-1,curDay).getDay();
   document.getElementById('day-heading').textContent=`${DNAMES[dow]}, ${MFULL[curMonth]} ${curDay}`;
-
-  // Column headers
   document.getElementById('col-heads').innerHTML=
     `<div class="ch-name">Activity</div>`+
     grp.members.map(m=>`<div class="ch-user" style="color:${m.color}">${escHtml(m.name.substring(0,5))}</div>`).join('');
-
-  // Rows
   document.getElementById('act-list').innerHTML=grp.activities.map(a=>{
     const toggles=grp.members.map(m=>{
-      const val=dd[a.id+'_'+m.id]||'';
+      const val=getVal(key,m.id,a.id);
       const isMine=m.id===me.id;
-      const isDone=val==='done', isSkip=val==='skip';
+      const isDone=val==='done',isSkip=val==='skip';
       const cls=(isDone?'done':isSkip?'skip':'')+' '+(isMine?'mine':'');
       const ico=isDone?'✓':isSkip?'✗':'';
       const sty=isDone?`background:${m.color}`:'';
-      return `<div class="act-toggle ${cls}" style="${sty}" ${isMine?`onclick="toggle('${a.id}',event)"`:''} >${ico}</div>`;
+      return`<div class="act-toggle ${cls}" style="${sty}" ${isMine?`onclick="toggle('${a.id}',event)"`:''} >${ico}</div>`;
     }).join('');
-    return `<div class="act-row">
+    return`<div class="act-row">
       <span class="act-emoji">${a.emoji}</span>
       <span class="act-name">${escHtml(a.name)}</span>
       ${toggles}
@@ -653,85 +724,61 @@ function renderActivities(){
   }).join('');
 }
 
-// ── TOGGLE ────────────────────────────────────────────────────────────────────
 function toggle(actId,e){
   e.stopPropagation();
   const key=`${MNUMS[curMonth]}-${curDay}`;
-  if(!localData[key]) localData[key]={};
-  if(!myTicks[key])   myTicks[key]={};
+  if(!myTicks[key])myTicks[key]={};
+  if(!localData[key])localData[key]={};
   const cur=myTicks[key][actId]||'';
   const next=cur===''?'done':cur==='done'?'skip':'';
   myTicks[key][actId]=next;
-  localData[key][actId+'_'+me.id]=next;
-  persist();
-  renderActivities();
-  renderCalendar();
-  renderScoreStrip();
+  localData[key][me.id]=myTicks[key];
+  persist();renderActivities();renderCalendar();renderScoreStrip();
 }
-
 function setMonth(i){
   curMonth=i;
   curDay=(MNUMS[i]-1===new Date().getMonth()&&new Date().getFullYear()===2026)?new Date().getDate():1;
   render();
 }
-function setDay(d){ curDay=d; renderCalendar(); renderActivities(); }
+function setDay(d){curDay=d;renderCalendar();renderActivities();}
 
-// ── REPORT ────────────────────────────────────────────────────────────────────
-function openReport(){ expandedMonth=curMonth; renderReport(); document.getElementById('report-modal').classList.add('open'); }
-function closeReport(){ document.getElementById('report-modal').classList.remove('open'); }
-function toggleMonthBreakdown(i){ expandedMonth=expandedMonth===i?null:i; renderReport(); }
-
+// ── REPORT ─────────────────────────────────────────────────────────────────────
+function openReport(){expandedMonth=curMonth;renderReport();document.getElementById('report-modal').classList.add('open');}
+function closeReport(){document.getElementById('report-modal').classList.remove('open');}
+function toggleMonthBreakdown(i){expandedMonth=expandedMonth===i?null:i;renderReport();}
 function renderReport(){
   const el=document.getElementById('report-body');
   const today=new Date();
-
-  // Overall per member
   const overall=grp.members.map(m=>{
     let done=0,total=0;
     MONTHS.forEach((_,mi)=>{
       const isNow=(MNUMS[mi]-1===today.getMonth()&&today.getFullYear()===2026);
       const days=isNow?today.getDate():MDAYS[mi];
-      for(let d=1;d<=days;d++){
-        const dd=localData[`${MNUMS[mi]}-${d}`]||{};
-        grp.activities.forEach(a=>{total++;if(dd[a.id+'_'+m.id]==='done')done++;});
-      }
+      for(let d=1;d<=days;d++) grp.activities.forEach(a=>{total++;if(getVal(`${MNUMS[mi]}-${d}`,m.id,a.id)==='done')done++;});
     });
-    return {...m,pct:total>0?Math.round(done/total*100):0};
+    return{...m,pct:total>0?Math.round(done/total*100):0};
   });
-
   const monthScores=MONTHS.map((m,i)=>{
     const isNow=(MNUMS[i]-1===today.getMonth()&&today.getFullYear()===2026);
     const days=isNow?today.getDate():MDAYS[i];
     const mScores=grp.members.map(mem=>{
       let done=0;
-      for(let d=1;d<=days;d++){
-        const dd=localData[`${MNUMS[i]}-${d}`]||{};
-        grp.activities.forEach(a=>{if(dd[a.id+'_'+mem.id]==='done')done++;});
-      }
+      for(let d=1;d<=days;d++) grp.activities.forEach(a=>{if(getVal(`${MNUMS[i]}-${d}`,mem.id,a.id)==='done')done++;});
       return Math.round(done/(days*grp.activities.length)*100);
     });
-    const hasData=grp.members.some(mem=>
-      grp.activities.some(a=>{
-        for(let d=1;d<=days;d++){const dd=localData[`${MNUMS[i]}-${d}`]||{};if(dd[a.id+'_'+mem.id])return true;}
-        return false;
-      })
-    );
-    return {m,full:MFULL[i],i,days,mScores,hasData};
+    const hasData=grp.members.some(mem=>grp.activities.some(a=>{
+      for(let d=1;d<=days;d++){if(getVal(`${MNUMS[i]}-${d}`,mem.id,a.id))return true;}return false;
+    }));
+    return{m,full:MFULL[i],i,days,mScores,hasData};
   }).filter(s=>s.hasData);
-
-  if(monthScores.length===0){
-    el.innerHTML='<p style="color:var(--muted);text-align:center;padding:3rem 1rem">No data yet. Start tracking!</p>';
-    return;
-  }
-
+  if(monthScores.length===0){el.innerHTML='<p style="color:var(--muted);text-align:center;padding:3rem 1rem">No data yet!</p>';return;}
   const r=28,circ=2*Math.PI*r;
   const cols=Math.min(grp.members.length,4);
-
   el.innerHTML=`
     <p style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Overall average</p>
     <div style="display:grid;grid-template-columns:repeat(${cols},1fr);gap:8px;margin-bottom:1.5rem">
       ${overall.map(m=>`
-        <div style="background:var(--bg);border-radius:var(--radius);padding:12px 6px;text-align:center">
+        <div style="background:var(--bg);border-radius:var(--radius);padding:12px 6px;text-align:center${m.id===me.id?';border:2px solid '+m.color:''}">
           <svg width="68" height="68" viewBox="0 0 68 68" style="display:block;margin:0 auto 5px">
             <circle cx="34" cy="34" r="${r}" fill="none" stroke="var(--light)" stroke-width="5.5"/>
             <circle cx="34" cy="34" r="${r}" fill="none" stroke="${m.color}" stroke-width="5.5"
@@ -739,26 +786,22 @@ function renderReport(){
               stroke-linecap="round" transform="rotate(-90 34 34)"/>
             <text x="34" y="38" text-anchor="middle" font-size="15" font-weight="700" fill="${m.color}">${m.pct}%</text>
           </svg>
-          <div style="font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escHtml(m.name)}</div>
+          <div style="font-size:12px;font-weight:600">${escHtml(m.name)}</div>
         </div>`).join('')}
     </div>
-
     <p style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">By month — tap to expand</p>
-
     ${monthScores.map(sc=>{
       const isOpen=expandedMonth===sc.i;
       const breakdown=isOpen?grp.activities.map(a=>{
-        const isNow2=(MNUMS[sc.i]-1===today.getMonth()&&today.getFullYear()===2026);
-        const days2=isNow2?today.getDate():MDAYS[sc.i];
+        const days2=(MNUMS[sc.i]-1===today.getMonth()&&today.getFullYear()===2026)?today.getDate():MDAYS[sc.i];
         const ms=grp.members.map(mem=>{
           let done=0;
-          for(let d=1;d<=days2;d++){const dd=localData[`${MNUMS[sc.i]}-${d}`]||{};if(dd[a.id+'_'+mem.id]==='done')done++;}
+          for(let d=1;d<=days2;d++){if(getVal(`${MNUMS[sc.i]}-${d}`,mem.id,a.id)==='done')done++;}
           return Math.round(done/days2*100);
         });
-        return {...a,ms};
+        return{...a,ms};
       }):[];
-
-      return `<div class="month-card${isOpen?' open':''}">
+      return`<div class="month-card${isOpen?' open':''}">
         <div class="month-card-hd" onclick="toggleMonthBreakdown(${sc.i})">
           <div style="flex:1">
             <div style="font-size:15px;font-weight:700;margin-bottom:7px">${sc.full}
@@ -776,74 +819,148 @@ function renderReport(){
           </div>
           <div class="month-arrow">›</div>
         </div>
-        ${isOpen?`
-          <div class="month-bd">
-            <div style="display:grid;grid-template-columns:22px 1fr ${grp.members.map(()=>'52px').join(' ')};gap:5px;align-items:center;margin-bottom:8px;padding-bottom:6px;border-bottom:0.5px solid var(--border)">
-              <div></div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px">Activity</div>
-              ${grp.members.map(m=>`<div style="text-align:center;font-size:9px;font-weight:700;color:${m.color};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(m.name.substring(0,7))}</div>`).join('')}
-            </div>
-            ${breakdown.map(a=>`
-              <div style="display:grid;grid-template-columns:22px 1fr ${grp.members.map(()=>'52px').join(' ')};gap:5px;align-items:center;margin-bottom:10px">
-                <span style="font-size:13px">${a.emoji}</span>
-                <span style="font-size:12px;font-weight:500">${escHtml(a.name)}</span>
-                ${grp.members.map((m,mi)=>`
-                  <div>
-                    <div style="height:5px;background:var(--light);border-radius:3px;overflow:hidden;margin-bottom:2px">
-                      <div style="width:${a.ms[mi]}%;height:100%;background:${m.color};border-radius:3px"></div>
-                    </div>
-                    <div style="text-align:center;font-size:10px;font-weight:700;color:${m.color}">${a.ms[mi]}%</div>
-                  </div>`).join('')}
-              </div>`).join('')}
-          </div>` : ''}
+        ${isOpen?`<div class="month-bd">
+          <div style="display:grid;grid-template-columns:22px 1fr ${grp.members.map(()=>'52px').join(' ')};gap:5px;align-items:center;margin-bottom:8px;padding-bottom:6px;border-bottom:0.5px solid var(--border)">
+            <div></div><div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase">Activity</div>
+            ${grp.members.map(m=>`<div style="text-align:center;font-size:9px;font-weight:700;color:${m.color};overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escHtml(m.name.substring(0,7))}</div>`).join('')}
+          </div>
+          ${breakdown.map(a=>`
+            <div style="display:grid;grid-template-columns:22px 1fr ${grp.members.map(()=>'52px').join(' ')};gap:5px;align-items:center;margin-bottom:10px">
+              <span style="font-size:13px">${a.emoji}</span>
+              <span style="font-size:12px;font-weight:500">${escHtml(a.name)}</span>
+              ${grp.members.map((m,mi)=>`
+                <div>
+                  <div style="height:5px;background:var(--light);border-radius:3px;overflow:hidden;margin-bottom:2px">
+                    <div style="width:${a.ms[mi]}%;height:100%;background:${m.color};border-radius:3px"></div>
+                  </div>
+                  <div style="text-align:center;font-size:10px;font-weight:700;color:${m.color}">${a.ms[mi]}%</div>
+                </div>`).join('')}
+            </div>`).join('')}
+        </div>` : ''}
       </div>`;
     }).join('')}`;
 }
 
-// ── SETTINGS ─────────────────────────────────────────────────────────────────
+// ── SETTINGS ──────────────────────────────────────────────────────────────────
 function openSettings(){
   document.getElementById('settings-info').innerHTML=
     `Group: <strong style="color:var(--text)">${escHtml(grp.name)}</strong><br>
-     Join code: <strong style="font-family:'DM Mono',monospace;letter-spacing:3px;color:var(--text)">${grp.code}</strong><br>
-     You: <strong style="color:${me.color}">${escHtml(me.name)}</strong>`;
+     Code: <strong style="font-family:'DM Mono',monospace;letter-spacing:3px;color:var(--text)">${grp.code}</strong><br>
+     You: <strong style="color:${me.color}">${escHtml(me.name)}</strong><br>
+     Members: ${grp.members.map(m=>`<span style="color:${m.color};font-weight:600">${escHtml(m.name)}</span>`).join(', ')}`;
   document.getElementById('settings-modal').classList.add('open');
 }
-function closeSettings(){ document.getElementById('settings-modal').classList.remove('open'); }
-function copyJoinCode(){
-  navigator.clipboard?.writeText(grp.code).then(()=>showToast('Code copied!')).catch(()=>showToast(grp.code));
-  closeSettings();
-}
+function closeSettings(){document.getElementById('settings-modal').classList.remove('open');}
+function copyJoinCode(){navigator.clipboard?.writeText(grp.code).then(()=>showToast('Code copied!')).catch(()=>showToast(grp.code));closeSettings();}
 function leaveGroup(){
   if(confirm('Leave this group? Your data stays in the database.')){
-    localStorage.removeItem('dart_grp');
-    localStorage.removeItem('dart_me');
+    const known=JSON.parse(localStorage.getItem('dart_known_groups')||'[]').filter(g=>g.code!==grp.code);
+    localStorage.setItem('dart_known_groups',JSON.stringify(known));
+    localStorage.removeItem('dart_grp_'+grp.code);
+    localStorage.removeItem('dart_me_'+grp.code);
     location.reload();
   }
 }
 
-// ── LOADER ────────────────────────────────────────────────────────────────────
-function showLoader(msg='Loading…'){ document.getElementById('loader-text').textContent=msg; document.getElementById('loader').classList.add('show'); }
-function hideLoader(){ document.getElementById('loader').classList.remove('show'); }
+// ── ADMIN PANEL ───────────────────────────────────────────────────────────────
+let editActivities=[],editMembers=[];
 
-// ── UTILS ─────────────────────────────────────────────────────────────────────
-function setSyncStatus(s,t){
-  document.getElementById('sync-dot').className='sync-dot'+(s==='ok'?'':' '+s);
-  document.getElementById('sync-text').textContent=t;
+function openAdminPanel(){
+  closeSettings();
+  document.getElementById('admin-pin-input').value='';
+  document.getElementById('admin-pin-section').style.display='block';
+  document.getElementById('admin-edit-section').style.display='none';
+  document.getElementById('admin-modal').classList.add('open');
 }
-function showToast(msg,isErr=false){
-  const t=document.getElementById('toast');
-  t.textContent=msg; t.className='toast'+(isErr?' err':'')+' show';
-  setTimeout(()=>t.className='toast'+(isErr?' err':''),2800);
-}
-function escHtml(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function closeAdminModal(){document.getElementById('admin-modal').classList.remove('open');}
 
-// ── START ─────────────────────────────────────────────────────────────────────
+async function verifyAdminPin(){
+  const entered=document.getElementById('admin-pin-input').value.trim();
+  showLoader('Verifying…');
+  try{
+    const rows=await sbGet('groups',`code=eq.${grp.code}&select=admin_pin,name,activities,members`);
+    hideLoader();
+    if(!rows||rows.length===0){showToast('Group not found',true);return;}
+    if(String(rows[0].admin_pin)!==String(entered)){showToast('Wrong PIN',true);return;}
+    editActivities=JSON.parse(JSON.stringify(rows[0].activities));
+    editMembers=JSON.parse(JSON.stringify(rows[0].members));
+    document.getElementById('edit-grp-name').value=rows[0].name;
+    renderEditForm();
+    document.getElementById('admin-pin-section').style.display='none';
+    document.getElementById('admin-edit-section').style.display='block';
+  }catch(e){hideLoader();showToast('Connection failed',true);}
+}
+
+function renderEditForm(){
+  document.getElementById('edit-activities-list').innerHTML=editActivities.map((a,i)=>`
+    <div class="act-row-setup">
+      <button class="emoji-btn" onclick="openEmojiPicker('act',${i},'edit')">${a.emoji}</button>
+      <input type="text" value="${escHtml(a.name)}" placeholder="Activity name" oninput="editActivities[${i}].name=this.value"
+        style="flex:1;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;background:var(--bg);color:var(--text)">
+      <button class="remove-btn" onclick="removeEditAct(${i})" ${editActivities.length<=1?'style="opacity:0.3;pointer-events:none"':''}>×</button>
+    </div>`).join('');
+  document.getElementById('edit-members-list').innerHTML=editMembers.map((m,i)=>`
+    <div class="member-row">
+      <div class="color-dot" style="background:${m.color}" onclick="cycleColor(${i},'edit')">${m.name?m.name[0].toUpperCase():'?'}</div>
+      <input type="text" value="${escHtml(m.name)}" placeholder="Member name"
+        oninput="editMembers[${i}].name=this.value;document.querySelectorAll('#edit-members-list .color-dot')[${i}].textContent=this.value?this.value[0].toUpperCase():'?'"
+        style="flex:1;padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);font-family:'DM Sans',sans-serif;font-size:14px;outline:none;background:var(--bg);color:var(--text)">
+      <button class="remove-btn" onclick="removeMem(${i},'edit')" ${editMembers.length<=1?'style="opacity:0.3;pointer-events:none"':''}>×</button>
+    </div>`).join('');
+}
+function addEditActivity(){editActivities.push({id:uid(),emoji:ALL_EMOJIS[editActivities.length%ALL_EMOJIS.length],name:''});renderEditForm();}
+function removeEditAct(i){if(editActivities.length<=1)return;editActivities.splice(i,1);renderEditForm();}
+function addEditMember(){editMembers.push({id:uid(),name:'',color:COLORS[editMembers.length%COLORS.length]});renderEditForm();}
+
+async function saveGroupEdits(){
+  const name=document.getElementById('edit-grp-name').value.trim();
+  const acts=editActivities.filter(a=>a.name.trim());
+  const mems=editMembers.filter(m=>m.name.trim());
+  if(!name||acts.length===0||mems.length===0){showToast('Fill in all fields',true);return;}
+  showLoader('Saving…');
+  try{
+    await sbPatch('groups',`code=eq.${grp.code}`,{name,activities:acts,members:mems,updated_at:new Date().toISOString()});
+    grp.name=name;grp.activities=acts;grp.members=mems;
+    me=mems.find(m=>m.id===me.id)||mems[0];
+    saveSession();hideLoader();closeAdminModal();
+    initApp();showToast('Group updated ✓');
+  }catch(e){hideLoader();showToast('Save failed: '+e.message,true);}
+}
+
+async function deleteGroup(){
+  if(!confirm('Delete this group and ALL its data permanently?'))return;
+  if(!confirm('Final warning — this cannot be undone. Delete?'))return;
+  showLoader('Deleting…');
+  try{
+    await sbDelete('groups',`code=eq.${grp.code}`);
+    const known=JSON.parse(localStorage.getItem('dart_known_groups')||'[]').filter(g=>g.code!==grp.code);
+    localStorage.setItem('dart_known_groups',JSON.stringify(known));
+    localStorage.removeItem('dart_grp_'+grp.code);
+    localStorage.removeItem('dart_me_'+grp.code);
+    hideLoader();location.reload();
+  }catch(e){hideLoader();showToast('Delete failed: '+e.message,true);}
+}
+
+// ── LOADER / UTILS ────────────────────────────────────────────────────────────
+function showLoader(msg='Loading…'){document.getElementById('loader-text').textContent=msg;document.getElementById('loader').classList.add('show');}
+function hideLoader(){document.getElementById('loader').classList.remove('show');}
+function setSyncStatus(s,t){document.getElementById('sync-dot').className='sync-dot'+(s==='ok'?'':' '+s);document.getElementById('sync-text').textContent=t;}
+function showToast(msg,isErr=false){const t=document.getElementById('toast');t.textContent=msg;t.className='toast'+(isErr?' err':'')+' show';setTimeout(()=>t.className='toast'+(isErr?' err':''),2800);}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ── START ──────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded',()=>{
-  const sg=localStorage.getItem('dart_grp');
-  const sm=localStorage.getItem('dart_me');
-  if(sg&&sm){
-    grp=JSON.parse(sg); me=JSON.parse(sm);
-    initApp(); showScreen('app');
+  const known=JSON.parse(localStorage.getItem('dart_known_groups')||'[]');
+  if(known.length>0){
+    const last=known[known.length-1];
+    const savedGrp=localStorage.getItem('dart_grp_'+last.code);
+    const savedMe=localStorage.getItem('dart_me_'+last.code);
+    if(savedGrp&&savedMe){
+      grp=JSON.parse(savedGrp);me=JSON.parse(savedMe);
+      initApp();showScreen('app');return;
+    }
   }
+  renderWelcomeBtns();
 });
 </script>
 </body>
